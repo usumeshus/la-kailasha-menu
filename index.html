@@ -151,21 +151,51 @@ function sendOrder(){
   if(!room){alert('Please select your Cottage / Room.');return}
   const entries=Object.entries(cart);
   if(!entries.length){alert('Please add at least one item.');return}
-  let total=0,msg=`🔔 *NEW ROOM ORDER — LA KAILASHA REGENCY*%0A%0A`; msg+=`🆔 Order ID: *${orderId}*%0A`;
-  msg+=`🏨 Cottage / Room: *${encodeURIComponent(room)}*%0A`;
-  if(guest)msg+=`👤 Guest: *${encodeURIComponent(guest)}*%0A`;
+
+  let total=0;
+  const lines=[];
+  lines.push('NEW ROOM ORDER - LA KAILASHA REGENCY');
+  lines.push('');
+  lines.push('Order ID: ' + orderId);
+  lines.push('Cottage / Room: ' + room);
+  if(guest) lines.push('Guest: ' + guest);
+
   const orderDate = document.getElementById('orderDate').value;
   const orderTime = document.getElementById('orderTime').value;
-  if(orderDate) msg+=`📅 Date: *${encodeURIComponent(orderDate)}*%0A`;
-  if(orderTime) msg+=`🕐 Time: *${encodeURIComponent(orderTime)}*%0A`;
-  msg+=`%0A🍽️ *ORDER:*%0A`;
-  entries.forEach(([k,v])=>{const p=products[k];total+=p.price*v;msg+=`• ${encodeURIComponent(p.name)} × ${v} — ₹${p.price*v}%0A`});
-  msg+=`%0A💰 *TOTAL: ₹${total}*%0A`;
-  if(note)msg+=`📝 Note: ${encodeURIComponent(note)}%0A`;
-  msg+=`%0A✅ Please confirm and prepare this order.`;
+  if(orderDate) lines.push('Date: ' + orderDate);
+  if(orderTime) lines.push('Time: ' + orderTime);
+
+  lines.push('');
+  lines.push('ORDER:');
+  entries.forEach(([k,v])=>{
+    const p=products[k];
+    total += p.price*v;
+    lines.push('- ' + p.name + ' x ' + v + ' - Rs.' + (p.price*v));
+  });
+
+  lines.push('');
+  lines.push('TOTAL: Rs.' + total);
+  if(note) lines.push('Note: ' + note);
+  lines.push('');
+  lines.push('Please confirm and prepare this order.');
+
+  // Encode the complete message once to prevent replacement '?' characters.
+  // WhatsApp message is deliberately ASCII-only for maximum compatibility.
+  const safeLines = lines.map(s => String(s)
+    .replace(/₹/g, 'Rs.')
+    .replace(/[•·]/g, '-')
+    .replace(/[—–−]/g, '-')
+    .replace(/[“”‘’]/g, "'")
+    .replace(/[^\x00-\x7F]/g, ''));
+  const msg = encodeURIComponent(safeLines.join('\n')).replace(/%5Cn/gi, '%0A');
   const url=`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
-  if(WHATSAPP_NUMBER.includes('X')){alert('Demo ready! Replace WHATSAPP_NUMBER in the HTML with the hotel WhatsApp number.');return}
-  window.open(url,'_blank'); orderId=makeOrderId();
+
+  if(WHATSAPP_NUMBER.includes('X')){
+    alert('Demo ready! Replace WHATSAPP_NUMBER in the HTML with the hotel WhatsApp number.');
+    return
+  }
+  window.open(url,'_blank');
+  orderId=makeOrderId();
 }
 document.getElementById('search').addEventListener('input',render);
 render();renderCart();
